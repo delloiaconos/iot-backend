@@ -2,7 +2,7 @@
 SHELL := /bin/sh
 DOCKER ?= docker
 COMPOSE ?= $(shell docker compose version >/dev/null 2>&1 && echo docker compose || echo docker-compose)
-COMPOSE_FILE ?= docker-compose.yaml
+COMPOSE_FILE ?= docker-compose.yml
 COMPOSE_NAME = "iotstack"
 
 OPENSSL ?= openssl
@@ -11,7 +11,7 @@ CERT_DAYS ?= 365
 .PHONY: init certs up down logs ps reset
 
 init:
-	@test -f .env || cp .env.example .env
+	@test -f .env || cp env.example .env
 	@echo "Created .env. Configure passwords and API_TOKEN before starting the stack."
 
 certs:
