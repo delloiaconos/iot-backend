@@ -1,0 +1,81 @@
+name: iot-backend
+
+services:
+  influxdb:
+    image: influxdb:2.7.12
+    restart: unless-stopped
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUX_USERNAME:?Set INFLUX_USERNAME in .env}
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUX_PASSWORD:?Set INFLUX_PASSWORD in .env}
+      DOCKER_INFLUXDB_INIT_ORG: ${INFLUX_ORG:?Set INFLUX_ORG in .env}
+      DOCKER_INFLUXDB_INIT_BUCKET: ${INFLUX_BUCKET:?Set INFLUX_BUCKET in .env}
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUX_TOKEN:?Set INFLUX_TOKEN in .env}
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+      - influxdb-config:/etc/influxdb2
+    expose:
+      - "8086"
+
+  grafana:
+    image: grafana/grafana:13.0.9
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:?Set GRAFANA_ADMIN_USER in .env}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD in .env}
+      GF_SERVER_ROOT_URL: https://grafana.example.com/
+      INFLUX_ORG: ${INFLUX_ORG:?Set INFLUX_ORG in .env}
+      INFLUX_BUCKET: ${INFLUX_BUCKET:?Set INFLUX_BUCKET in .env}
+      INFLUX_TOKEN: ${INFLUX_TOKEN:?Set INFLUX_TOKEN in .env}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    expose:
+      - "3000"
+    depends_on:
+      - influxdb
+
+  mosquitto:
+    image: eclipse-mosquitto:2.1.2-alpine
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - mosquitto-data:/mosquitto/data
+      - mosquitto-log:/mosquitto/log
+
+  telegraf:
+    image: telegraf:1.40.2-alpine
+    restart: unless-stopped
+    environment:
+      INFLUX_ORG: ${INFLUX_ORG:?Set INFLUX_ORG in .env}
+      INFLUX_BUCKET: ${INFLUX_BUCKET:?Set INFLUX_BUCKET in .env}
+      INFLUX_TOKEN: ${INFLUX_TOKEN:?Set INFLUX_TOKEN in .env}
+      MQTT_USER: ${MQTT_USER:?Set MQTT_USER in .env}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:?Set MQTT_PASSWORD in .env}
+    volumes:
+      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+    depends_on:
+      - influxdb
+      - mosquitto
+
+  nginx:
+    image: nginx:1.31.8
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - grafana
+      - influxdb
+
+volumes:
+  influxdb-data:
+  influxdb-config:
+  grafana-data:
+  mosquitto-data:
+  mosquitto-log:
