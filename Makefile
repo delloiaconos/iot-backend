@@ -18,11 +18,11 @@ certs:
 	@mkdir -p nginx/certs
 	@umask 077; $(OPENSSL) req -x509 -newkey rsa:3072 -sha256 -nodes \
 		-days $(CERT_DAYS) -config nginx/openssl.cnf \
-		-keyout nginx/certs/server.key -out nginx/certs/server.crt
+		-keyout nginx/certs/privkey.pem -out nginx/certs/fullchain.pem
 	@echo "Certificate generated in nginx/certs. Restart NGINX after renewing it."
 
 up:
-	@test -s nginx/certs/server.crt -a -s nginx/certs/server.key || { echo "Missing TLS certificate: run make certs first."; exit 1; }
+	@test -s nginx/certs/fullchain.pem -a -s nginx/certs/privkey.pem || { echo "Missing TLS certificate: run make certs first."; exit 1; }
 	@test -s .env || { echo "Missing environment file: run make init first."; exit 1; }
 	$(COMPOSE) -f $(COMPOSE_FILE) -p $(COMPOSE_NAME) up -d --build
 
